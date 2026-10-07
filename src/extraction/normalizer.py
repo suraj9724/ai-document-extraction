@@ -37,61 +37,23 @@ class InvoiceNormalizer:
         normalized_items = []
 
         for item in items:
-
-            # Create a new dictionary instead of modifying
-            # the original LLM response directly.
             normalized_item = {}
 
-            # -----------------------------------------------------
-            # Description
-            # -----------------------------------------------------
-            #
-            # Our schema expects:
-            #
-            # description
-            #
-            # But the LLM might return:
-            #
-            # service
-            # product
-            # item
-            #
             description = (
                 item.get("description")
                 or item.get("service")
                 or item.get("product")
                 or item.get("item")
             )
-
             normalized_item["description"] = description
 
-            # -----------------------------------------------------
-            # Quantity
-            # -----------------------------------------------------
-            #
-            # Our schema expects "quantity".
-            # Some models may return "qty".
-            #
             quantity = (
                 item.get("quantity")
                 if item.get("quantity") is not None
                 else item.get("qty")
             )
+            normalized_item["quantity"] = self._to_number(quantity)
 
-            normalized_item["quantity"] = self._to_number(
-                quantity
-            )
-
-            # -----------------------------------------------------
-            # Unit price
-            # -----------------------------------------------------
-            #
-            # Different documents/models may use:
-            #
-            # unit_price
-            # price
-            # rate
-            #
             unit_price = (
                 item.get("unit_price")
                 if item.get("unit_price") is not None
@@ -101,21 +63,22 @@ class InvoiceNormalizer:
             if unit_price is None:
                 unit_price = item.get("rate")
 
-            normalized_item["unit_price"] = self._to_number(
-                unit_price
-            )
+            normalized_item["unit_price"] = self._to_number(unit_price)
 
-            # -----------------------------------------------------
-            # Amount
-            # -----------------------------------------------------
-
-            normalized_item["amount"] = self._to_number(
+            amount = (
                 item.get("amount")
+                if item.get("amount") is not None
+                else item.get("total")
             )
+            if amount is None:
+                amount = item.get("line_total")
 
-            normalized_items.append(
-                normalized_item
-            )
+            normalized_item["amount"] = self._to_number(amount)
+
+            # Preserve the page number returned by the LLM.
+            normalized_item["page"] = item.get("page")
+
+            normalized_items.append(normalized_item)
 
         # Replace the original items with normalized items
         data["items"] = normalized_items

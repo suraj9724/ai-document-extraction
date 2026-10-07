@@ -81,6 +81,116 @@ IMPORTANT LINE ITEM RULES:
     quantity, unit_price, and amount correspond to the
     same line item.
 
+15. For every invoice item, include the page number where
+    that item appears.
+
+16. The page number must correspond to the [PAGE X] marker
+    provided in the document.
+
+17. Do not guess the page number.
+
+18. If the page cannot be determined, return null.
+
+19. If invoice items continue across multiple pages,
+    preserve every item and assign each item its correct page.
+    
+IMPORTANT ITEM EXTRACTION RULES:
+
+20. The "items" array must contain ONLY actual invoice
+    line items representing products or services.
+
+21. Do NOT include invoice totals or summary rows as items.
+
+22. Do NOT include:
+    - Subtotal
+    - GST / Tax
+    - Total
+    - Additional Services Subtotal
+    - Additional GST
+    - Additional Services Total
+    - Payment Terms
+    - Bank Details
+    - Notes
+    - Terms and Conditions
+    - Payment instructions
+
+23. An item should normally have a description and at least
+    one monetary/quantity value associated with it.
+
+24. Summary or informational text must never be represented
+    as an invoice item.
+
+25. If a section contains additional services with actual
+    line items, extract those line items, but do not extract
+    the section's subtotal, tax, or total as an item.
+    
+26. When an address contains city, state/province,
+    postal code, and country, separate them into the
+    appropriate fields.
+
+27. Do not put the country inside city or state.
+
+Example:
+
+"Ahmedabad, Gujarat 380015, India"
+
+must become:
+
+city = "Ahmedabad"
+state = "Gujarat"
+country = "India"
+
+IMPORTANT DISTINCTION:
+
+26. Invoice-level financial totals must still be extracted
+    into their dedicated fields.
+
+27. Do NOT put these values inside the "items" array.
+
+28. Extract:
+    - Subtotal → "subtotal"
+    - GST / Tax → "gst"
+    - Final invoice total → "total"
+
+29. The following are NOT invoice items, but their values
+    should still be extracted when they represent the
+    invoice-level totals:
+    - Subtotal
+    - GST
+    - Tax
+    - Total
+    - Invoice Total
+
+30. If the document contains additional section totals,
+    do not confuse them with the main invoice-level totals.
+    Only use the totals that clearly correspond to the
+    main invoice total.
+    
+    31. If a country is explicitly present in a party address,
+    extract it into the "country" field.
+
+32. Example:
+
+    "Ahmedabad, Gujarat 380015, India"
+
+    must become:
+
+    city = "Ahmedabad"
+    state = "Gujarat"
+    country = "India"
+
+33. Example:
+
+    "Melbourne, VIC 3000, Australia"
+
+    must become:
+
+    city = "Melbourne"
+    state = "VIC"
+    country = "Australia"
+
+34. Do not omit the country when it is explicitly present.
+
 The JSON must follow this structure:
 
 {{
@@ -90,13 +200,15 @@ The JSON must follow this structure:
     "seller": {{
         "name": null,
         "city": null,
-        "state": null
+        "state": null,
+        "country":null
     }},
 
     "customer": {{
         "name": null,
         "city": null,
-        "state": null
+        "state": null,
+        "country": null
     }},
 
     "items": [],

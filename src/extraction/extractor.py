@@ -53,6 +53,33 @@ IMPORTANT RULES:
 
 8. Return an empty array if no invoice items
    can be found.
+   
+IMPORTANT LINE ITEM RULES:
+
+9. For each invoice item, carefully distinguish:
+   - quantity
+   - unit_price
+   - amount
+
+10. If an item shows a pattern such as:
+    2 × $450 = $900
+
+    then:
+    quantity = 2
+    unit_price = 450
+    amount = 900
+
+11. NEVER use the line amount as the unit price.
+
+12. If quantity, unit price, and amount are all explicitly
+    present, preserve each value exactly as shown.
+
+13. Do not calculate unit_price from amount / quantity.
+    Only extract the value explicitly shown in the document.
+
+14. Before returning the JSON, verify that the extracted
+    quantity, unit_price, and amount correspond to the
+    same line item.
 
 The JSON must follow this structure:
 

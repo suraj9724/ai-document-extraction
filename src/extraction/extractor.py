@@ -3,6 +3,7 @@ import json
 from ollama import Client
 
 from extraction.schema import Invoice
+from extraction.normalizer import InvoiceNormalizer
 
 
 class InvoiceExtractor:
@@ -11,22 +12,47 @@ class InvoiceExtractor:
         self,
         model: str = "llama3.2:3b"
     ):
+        # Store the model name so we can easily change it later
         self.model = model
+
+        # Connect to the local Ollama server
         self.client = Client(
             host="http://localhost:11434"
         )
 
+        self.normalizer = InvoiceNormalizer()
+
     def extract(self, document_text: str) -> Invoice:
 
+        # This prompt tells the LLM exactly what
+        # information we want to extract.
         prompt = f"""
-You are an information extraction system.
+You are an invoice information extraction system.
 
-Extract invoice information from the document
-and return ONLY valid JSON.
+Extract information from the document below.
 
-Do not explain anything.
+Return ONLY valid JSON.
 
-If a field is missing, use null.
+IMPORTANT RULES:
+
+1. Extract information only when it is explicitly
+   present in the document.
+
+2. NEVER invent missing information.
+
+3. NEVER guess a value.
+
+4. If a field cannot be found, return null.
+
+5. Do not calculate missing values.
+
+6. Preserve the values found in the document.
+
+7. For invoice items, extract every item that is
+   explicitly present.
+
+8. Return an empty array if no invoice items
+   can be found.
 
 The JSON must follow this structure:
 
@@ -35,25 +61,18 @@ The JSON must follow this structure:
     "invoice_date": null,
 
     "seller": {{
-        "name": "",
+        "name": null,
         "city": null,
         "state": null
     }},
 
     "customer": {{
-        "name": "",
+        "name": null,
         "city": null,
         "state": null
     }},
 
-    "items": [
-        {{
-            "description": "",
-            "quantity": 0,
-            "unit_price": 0,
-            "amount": 0
-        }}
-    ],
+    "items": [],
 
     "subtotal": null,
     "gst": null,
@@ -70,6 +89,7 @@ Document:
 Return ONLY JSON.
 """
 
+        # Send the extraction request to the local LLM
         response = self.client.chat(
             model=self.model,
             messages=[
@@ -80,8 +100,14 @@ Return ONLY JSON.
             ]
         )
 
+        # Get the text returned by the LLM
         content = response["message"]["content"].strip()
 
+        # Convert JSON text into a Python dictionary
         data = json.loads(content)
 
+        # Normalize invoice data before validation
+        data = self.normalizer.normalize(data)
+
+        # Validate the structure using our Pydantic schema
         return Invoice.model_validate(data)

@@ -2,10 +2,10 @@ from pydantic import BaseModel
 
 
 class InvoiceItem(BaseModel):
-    description: str
-    quantity: float
-    unit_price: float
-    amount: float
+    description: str | None = None
+    quantity: float | None = None
+    unit_price: float | None = None
+    amount: float | None = None
 
 
 class Party(BaseModel):

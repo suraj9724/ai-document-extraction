@@ -231,6 +231,9 @@ Return ONLY JSON.
         # Send the extraction request to the local LLM
         response = self.client.chat(
             model=self.model,
+            
+            # Ask Ollama to return valid JSON.
+            format="json",
             messages=[
                 {
                     "role": "user",

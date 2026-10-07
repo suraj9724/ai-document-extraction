@@ -8,23 +8,18 @@ class ExtractionDecision:
         self,
         invoice: Invoice,
         missing_fields: list[str],
-        business_errors: list[str],
+        business_errors: list[ReviewField],
         semantic_reviews: list[ReviewField],
         confidence_scores: dict,
     ) -> dict:
-        """
-        Combine all validation results and produce the
-        final extraction decision.
-        """
 
         review_fields = []
 
         # ---------------------------------------------------------
-        # 1. Convert missing fields into review items
+        # Missing fields
         # ---------------------------------------------------------
 
         for field in missing_fields:
-
             review_fields.append(
                 ReviewField(
                     field=field,
@@ -34,46 +29,34 @@ class ExtractionDecision:
             )
 
         # ---------------------------------------------------------
-        # 2. Convert business validation errors
-        #    into review items
+        # Business validation errors
         # ---------------------------------------------------------
+        #
+        # These already contain the exact field, value and page.
+        #
 
-        for error in business_errors:
-
-            review_fields.append(
-                ReviewField(
-                    field="invoice",
-                    value=None,
-                    reason=error,
-                )
-            )
+        review_fields.extend(business_errors)
 
         # ---------------------------------------------------------
-        # 3. Add semantic validation results
+        # Semantic validation errors
         # ---------------------------------------------------------
 
-        review_fields.extend(
-            semantic_reviews
-        )
-        
+        review_fields.extend(semantic_reviews)
+
         # ---------------------------------------------------------
-        # Check confidence thresholds
+        # Confidence warnings
         # ---------------------------------------------------------
 
         for field, score in confidence_scores.items():
 
-            # Any field below 0.70 requires human review.
             if score < 0.70:
 
-                # Avoid adding the same field twice if another
-                # validation already reported it.
                 already_reported = any(
                     review.field == field
                     for review in review_fields
                 )
 
                 if not already_reported:
-
                     review_fields.append(
                         ReviewField(
                             field=field,
@@ -85,21 +68,11 @@ class ExtractionDecision:
                         )
                     )
 
-        # ---------------------------------------------------------
-        # 4. Decide final status
-        # ---------------------------------------------------------
-
-        if review_fields:
-
-            status = "needs_review"
-
-        else:
-
-            status = "accepted"
-
-        # ---------------------------------------------------------
-        # 5. Return structured final result
-        # ---------------------------------------------------------
+        status = (
+            "needs_review"
+            if review_fields
+            else "accepted"
+        )
 
         return {
             "status": status,

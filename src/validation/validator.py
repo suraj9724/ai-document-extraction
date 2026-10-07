@@ -1,15 +1,15 @@
 from extraction.schema import Invoice
+from validation.review import ReviewField
 
 
 class InvoiceValidator:
 
-    def validate(self, invoice: Invoice) -> list[str]:
+    def validate(self, invoice: Invoice) -> list[ReviewField]:
         """
         Validate the extracted invoice using business rules.
 
-        Returns:
-            A list of validation errors.
-            An empty list means the invoice passed validation.
+        Returns structured review information so that the
+        caller knows which field caused the validation issue.
         """
 
         errors = []
@@ -17,14 +17,7 @@ class InvoiceValidator:
         # ---------------------------------------------------------
         # 1. Validate invoice total
         # ---------------------------------------------------------
-        #
-        # Check:
-        #
-        # subtotal + GST = total
-        #
-        # We only perform this check when all three values
-        # are available.
-        #
+
         if (
             invoice.subtotal is not None
             and invoice.gst is not None
@@ -32,12 +25,17 @@ class InvoiceValidator:
         ):
             expected_total = invoice.subtotal + invoice.gst
 
-            # Allow a small rounding difference.
             if abs(expected_total - invoice.total) > 0.01:
                 errors.append(
-                    f"Invoice total mismatch: "
-                    f"expected {expected_total}, "
-                    f"but got {invoice.total}"
+                    ReviewField(
+                        field="total",
+                        value=invoice.total,
+                        reason=(
+                            f"Invoice total mismatch: "
+                            f"expected {expected_total}, "
+                            f"but got {invoice.total}"
+                        ),
+                    )
                 )
 
         # ---------------------------------------------------------
@@ -46,43 +44,50 @@ class InvoiceValidator:
 
         for index, item in enumerate(invoice.items):
 
-            # Human-readable item number.
             item_number = index + 1
 
-            # -----------------------------------------------------
-            # Check quantity
-            # -----------------------------------------------------
-
+            # Missing quantity
             if item.quantity is None:
                 errors.append(
-                    f"Item {item_number} is missing quantity."
+                    ReviewField(
+                        field=f"items[{index}].quantity",
+                        value=None,
+                        page=item.page,
+                        reason=(
+                            f"Item {item_number} is missing quantity."
+                        ),
+                    )
                 )
 
-            # -----------------------------------------------------
-            # Check unit price
-            # -----------------------------------------------------
-
+            # Missing unit price
             if item.unit_price is None:
                 errors.append(
-                    f"Item {item_number} is missing unit price."
+                    ReviewField(
+                        field=f"items[{index}].unit_price",
+                        value=None,
+                        page=item.page,
+                        reason=(
+                            f"Item {item_number} "
+                            f"is missing unit price."
+                        ),
+                    )
                 )
 
-            # -----------------------------------------------------
-            # Check amount
-            # -----------------------------------------------------
-
+            # Missing amount
             if item.amount is None:
                 errors.append(
-                    f"Item {item_number} is missing amount."
+                    ReviewField(
+                        field=f"items[{index}].amount",
+                        value=None,
+                        page=item.page,
+                        reason=(
+                            f"Item {item_number} is missing amount."
+                        ),
+                    )
                 )
 
             # -----------------------------------------------------
-            # Validate:
-            #
             # quantity × unit_price = amount
-            #
-            # Only perform the calculation when all three
-            # values are available.
             # -----------------------------------------------------
 
             if (
@@ -94,46 +99,51 @@ class InvoiceValidator:
                     item.quantity * item.unit_price
                 )
 
-                # Allow a small rounding difference.
                 if abs(expected_amount - item.amount) > 0.01:
                     errors.append(
-                        f"Item {item_number} amount mismatch: "
-                        f"expected {expected_amount}, "
-                        f"but got {item.amount}"
+                        ReviewField(
+                            field=f"items[{index}].amount",
+                            value=item.amount,
+                            page=item.page,
+                            reason=(
+                                f"Item {item_number} amount mismatch: "
+                                f"expected {expected_amount}, "
+                                f"but got {item.amount}"
+                            ),
+                        )
                     )
 
-        # Return all validation errors.
-        #
-        # [] means all business validations passed.
         return errors
 
     def find_duplicate_items(
         self,
         invoice: Invoice
-    ) -> list[str]:
+    ) -> list[ReviewField]:
         """
         Detect duplicate invoice line-item descriptions.
-
-        This is a simple rule for our learning project.
         """
 
         seen = set()
         duplicates = []
 
-        for item in invoice.items:
+        for index, item in enumerate(invoice.items):
 
-            # Ignore items without a description.
             if not item.description:
                 continue
 
-            # Normalize capitalization and whitespace
-            # before checking for duplicates.
             description = item.description.strip().lower()
 
             if description in seen:
                 duplicates.append(
-                    f"Duplicate line item detected: "
-                    f"{item.description}"
+                    ReviewField(
+                        field=f"items[{index}].description",
+                        value=item.description,
+                        page=item.page,
+                        reason=(
+                            f"Duplicate line item detected: "
+                            f"{item.description}"
+                        ),
+                    )
                 )
             else:
                 seen.add(description)

@@ -169,13 +169,10 @@ async def extract_invoice(
         }
 
     except Exception as error:
-
-        # Print the real error in the Uvicorn terminal
-        print("ERROR:", repr(error))
-
-        # Re-raise the original exception so Uvicorn
-        # displays the complete traceback.
-        raise
+        raise HTTPException(
+            status_code=500,
+            detail=str(error),
+        )
 
     finally:
 

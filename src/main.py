@@ -145,6 +145,19 @@ def main():
     else:
 
         print("No fields require review.")
+        
+        
+    # ---------------------------------------------------------
+    # Check for duplicate line items
+    # ---------------------------------------------------------
+
+    duplicate_errors = validator.find_duplicate_items(
+        invoice
+    )
+
+    validation_errors.extend(
+        duplicate_errors
+    )
 
 if __name__ == "__main__":
     main()

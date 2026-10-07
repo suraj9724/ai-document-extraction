@@ -4,6 +4,7 @@ from extraction.extractor import InvoiceExtractor
 from validation.validator import InvoiceValidator
 from validation.completeness import CompletenessChecker
 from validation.semantic_validator import SemanticValidator
+from validation.decision import ExtractionDecision
 
 
 def main():
@@ -94,6 +95,34 @@ def main():
 
         for error in semantic_errors:
             print(f"- {error}")
-        
+            
+    # ---------------------------------------------------------
+    # STEP 6: Make the final extraction decision
+    # ---------------------------------------------------------
+
+    decision_engine = ExtractionDecision()
+
+    decision = decision_engine.decide(
+        invoice=invoice,
+        missing_fields=missing_fields,
+        business_errors=validation_errors,
+        semantic_errors=semantic_errors,
+    )
+
+    print("\n========== FINAL DECISION ==========\n")
+
+    print(f"Status: {decision['status']}")
+
+    if decision["issues"]:
+
+        print("\nIssues requiring attention:")
+
+        for issue in decision["issues"]:
+            print(f"- {issue}")
+
+    else:
+
+        print("No issues detected.")
+
 if __name__ == "__main__":
     main()

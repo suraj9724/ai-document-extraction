@@ -1,5 +1,6 @@
 from extraction.loader import load_document
 from extraction.extractor import InvoiceExtractor
+from extraction.document_processor import DocumentProcessor
 
 from validation.validator import InvoiceValidator
 from validation.completeness import CompletenessChecker
@@ -16,7 +17,11 @@ def main():
     # STEP 1: Extract raw text from the PDF
     # ---------------------------------------------------------
 
-    document_text = load_document(file_path)
+    # Create the document processor.
+    document_processor = DocumentProcessor()
+
+    # Extract all pages and prepare them for the LLM.
+    document_text = document_processor.process(file_path)
 
     print("\n========== EXTRACTED TEXT ==========\n")
     print(document_text)

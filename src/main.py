@@ -81,11 +81,14 @@ def main():
 
     semantic_validator = SemanticValidator()
 
-    semantic_errors = semantic_validator.validate(invoice)
+    # Run semantic validation.
+    # The result contains structured information about
+    # exactly which fields need review.
+    semantic_reviews = semantic_validator.validate(invoice)
 
     print("\n========== SEMANTIC VALIDATION ==========\n")
 
-    if not semantic_errors:
+    if not semantic_reviews:
 
         print("Semantic validation passed.")
 
@@ -93,7 +96,7 @@ def main():
 
         print("Semantic validation failed.")
 
-        for error in semantic_errors:
+        for error in semantic_reviews:
             print(f"- {error}")
             
     # ---------------------------------------------------------
@@ -106,23 +109,37 @@ def main():
         invoice=invoice,
         missing_fields=missing_fields,
         business_errors=validation_errors,
-        semantic_errors=semantic_errors,
+        semantic_reviews=semantic_reviews,
     )
 
     print("\n========== FINAL DECISION ==========\n")
 
     print(f"Status: {decision['status']}")
 
-    if decision["issues"]:
+    # Get the fields that need human review
+    review_fields = decision["review_fields"]
 
-        print("\nIssues requiring attention:")
+    if review_fields:
 
-        for issue in decision["issues"]:
-            print(f"- {issue}")
+        print("\nFields requiring review:")
+
+        for review in review_fields:
+
+            print(
+                f"- Field: {review['field']}"
+            )
+
+            print(
+                f"  Value: {review['value']}"
+            )
+
+            print(
+                f"  Reason: {review['reason']}"
+            )
 
     else:
 
-        print("No issues detected.")
+        print("No fields require review.")
 
 if __name__ == "__main__":
     main()

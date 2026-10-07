@@ -51,8 +51,8 @@ class InvoiceValidator:
 
         for index, item in enumerate(invoice.items):
 
-            # We can only calculate the expected amount
-            # when both quantity and unit price are available.
+            # We can only verify the item's amount when
+            # quantity, unit price and amount are all available.
             if (
                 item.quantity is not None
                 and item.unit_price is not None
@@ -63,16 +63,15 @@ class InvoiceValidator:
                     item.quantity * item.unit_price
                 )
 
-                # Compare calculated amount with extracted amount.
                 if abs(
                     expected_amount - item.amount
                 ) > 0.01:
 
                     errors.append(
                         f"Item {index + 1} amount mismatch: "
-                f"expected {expected_amount}, "
-                f"but got {item.amount}"
-            )
+                        f"expected {expected_amount}, "
+                        f"but got {item.amount}"
+                    )
 
         # ---------------------------------------------------------
         # 3. Validate subtotal
@@ -83,19 +82,35 @@ class InvoiceValidator:
         #
         if invoice.items and invoice.subtotal is not None:
 
-            calculated_subtotal = sum(
-                item.amount
+            # We can only calculate the subtotal if every item
+            # has an extracted amount.
+            #
+            # If even one amount is missing, we don't have
+            # enough information to perform this calculation.
+            all_amounts_available = all(
+                item.amount is not None
                 for item in invoice.items
             )
 
-            if abs(
-                calculated_subtotal - invoice.subtotal
-            ) > 0.01:
-                errors.append(
-                    f"Subtotal mismatch: "
-                    f"expected {calculated_subtotal}, "
-                    f"but got {invoice.subtotal}"
+            if all_amounts_available:
+
+                # Add all extracted item amounts together.
+                calculated_subtotal = sum(
+                    item.amount
+                    for item in invoice.items
                 )
+
+                # Compare our calculated subtotal with the
+                # subtotal extracted by the LLM.
+                if abs(
+                    calculated_subtotal - invoice.subtotal
+                ) > 0.01:
+
+                    errors.append(
+                        f"Subtotal mismatch: "
+                        f"expected {calculated_subtotal}, "
+                        f"but got {invoice.subtotal}"
+                    )
 
         # Return all validation errors.
         #

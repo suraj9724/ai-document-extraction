@@ -1,4 +1,5 @@
 from extraction.schema import Invoice
+from validation.review import ReviewField
 
 
 class ExtractionDecision:
@@ -8,58 +9,73 @@ class ExtractionDecision:
         invoice: Invoice,
         missing_fields: list[str],
         business_errors: list[str],
-        semantic_errors: list[str],
+        semantic_reviews: list[ReviewField],
     ) -> dict:
         """
-        Decide whether the extracted invoice can be
-        automatically accepted or should be reviewed.
-
-        This function does NOT perform extraction.
-
-        It only combines the results of all validation
-        steps and makes a final decision.
+        Combine all validation results and produce the
+        final extraction decision.
         """
 
+        review_fields = []
+
         # ---------------------------------------------------------
-        # Combine all problems found during validation
+        # 1. Convert missing fields into review items
         # ---------------------------------------------------------
 
-        issues = []
-
-        # Missing fields are extraction/completeness issues
         for field in missing_fields:
-            issues.append(
-                f"Missing field: {field}"
+
+            review_fields.append(
+                ReviewField(
+                    field=field,
+                    value=None,
+                    reason="Important field was not extracted.",
+                )
             )
 
-        # Business-rule problems
-        issues.extend(business_errors)
-
-        # Semantic problems
-        issues.extend(semantic_errors)
-
         # ---------------------------------------------------------
-        # Make the final decision
+        # 2. Convert business validation errors
+        #    into review items
         # ---------------------------------------------------------
 
-        if issues:
+        for error in business_errors:
 
-            # Something needs attention, so we should
-            # not automatically trust this extraction.
+            review_fields.append(
+                ReviewField(
+                    field="invoice",
+                    value=None,
+                    reason=error,
+                )
+            )
+
+        # ---------------------------------------------------------
+        # 3. Add semantic validation results
+        # ---------------------------------------------------------
+
+        review_fields.extend(
+            semantic_reviews
+        )
+
+        # ---------------------------------------------------------
+        # 4. Decide final status
+        # ---------------------------------------------------------
+
+        if review_fields:
+
             status = "needs_review"
 
         else:
 
-            # No problems were detected by our validation
-            # layers, so the invoice can be accepted.
             status = "accepted"
 
         # ---------------------------------------------------------
-        # Return a single structured result
+        # 5. Return structured final result
         # ---------------------------------------------------------
 
         return {
             "status": status,
             "invoice": invoice.model_dump(),
-            "issues": issues,
+            "review_fields": [
+                review.model_dump()
+                for review in review_fields
+            ],
         }

@@ -10,6 +10,7 @@ class ExtractionDecision:
         missing_fields: list[str],
         business_errors: list[str],
         semantic_reviews: list[ReviewField],
+        confidence_scores: dict,
     ) -> dict:
         """
         Combine all validation results and produce the
@@ -54,6 +55,35 @@ class ExtractionDecision:
         review_fields.extend(
             semantic_reviews
         )
+        
+        # ---------------------------------------------------------
+        # Check confidence thresholds
+        # ---------------------------------------------------------
+
+        for field, score in confidence_scores.items():
+
+            # Any field below 0.70 requires human review.
+            if score < 0.70:
+
+                # Avoid adding the same field twice if another
+                # validation already reported it.
+                already_reported = any(
+                    review.field == field
+                    for review in review_fields
+                )
+
+                if not already_reported:
+
+                    review_fields.append(
+                        ReviewField(
+                            field=field,
+                            value=None,
+                            reason=(
+                                f"Low extraction confidence: "
+                                f"{score:.2f}"
+                            ),
+                        )
+                    )
 
         # ---------------------------------------------------------
         # 4. Decide final status

@@ -6,6 +6,7 @@ from validation.validator import InvoiceValidator
 from validation.completeness import CompletenessChecker
 from validation.semantic_validator import SemanticValidator
 from validation.decision import ExtractionDecision
+from validation.confidence import ConfidenceCalculator
 
 
 def main():
@@ -105,6 +106,27 @@ def main():
             print(f"- {error}")
             
     # ---------------------------------------------------------
+    # STEP 6: Calculate field-level confidence
+    # ---------------------------------------------------------
+
+    confidence_calculator = ConfidenceCalculator()
+
+    confidence_scores = confidence_calculator.calculate(
+    invoice=invoice,
+    missing_fields=missing_fields,
+    semantic_reviews=semantic_reviews,
+    business_errors=validation_errors,
+    )
+
+    print("\n========== CONFIDENCE ==========\n")
+
+    for field, score in confidence_scores.items():
+
+        print(
+            f"{field}: {score:.2f}"
+        )
+            
+    # ---------------------------------------------------------
     # STEP 6: Make the final extraction decision
     # ---------------------------------------------------------
 
@@ -115,6 +137,7 @@ def main():
         missing_fields=missing_fields,
         business_errors=validation_errors,
         semantic_reviews=semantic_reviews,
+        confidence_scores=confidence_scores,
     )
 
     print("\n========== FINAL DECISION ==========\n")
